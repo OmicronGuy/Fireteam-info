@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Destiny 2 Fireteam</title>
+  <style>
+    :root {
+      --void: #0b1019;
+      --hull: #131a27;
+      --plate: #1a2334;
+      --seam: rgba(160, 185, 230, 0.14);
+      --frost: #e9eff9;
+      --mist: #8c98ae;
+      --light: #9ec1ff;
+      --gold: #dcb96e;
+      --flare: #f2857d;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: var(--void);
+      color: var(--frost);
+      font-family: "Bahnschrift", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.4;
+      font-variant-numeric: tabular-nums;
+    }
+
+    button, input { font-family: inherit; }
+
+    :focus-visible { outline: 2px solid var(--light); outline-offset: 2px; }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 420px;
+      min-height: 100vh;
+      margin: 0 auto;
+      background: var(--hull);
+    }
+    @media (min-width: 460px) {
+      body:not(.pip) .panel {
+        min-height: 0;
+        margin-top: 28px;
+        border: 1px solid var(--seam);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+      }
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--seam);
+    }
+
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--mist);
+    }
+    .dot.ok { background: var(--light); box-shadow: 0 0 8px rgba(158, 193, 255, 0.7); }
+    .dot.error, .dot.setup { background: var(--flare); }
+
+    .actions { display: flex; gap: 2px; }
+    .actions button {
+      width: 30px;
+      height: 30px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--mist);
+      font-size: 17px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .actions button:hover { background: var(--plate); color: var(--frost); }
+
+    .settings {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 14px;
+      border-bottom: 1px solid var(--seam);
+    }
+    .settings[hidden] { display: none; }
+    .settings label {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      color: var(--mist);
+      font-size: 13px;
+    }
+    .settings input {
+      padding: 9px 11px;
+      border: 1px solid var(--seam);
+      border-radius: 8px;
+      background: var(--void);
+      color: var(--frost);
+      font-size: 14px;
+    }
+    .settings input:focus-visible { outline-offset: 0; border-color: var(--light); }
+    .settings .primary {
+      align-self: flex-start;
+      padding: 8px 16px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--light);
+      color: #0a1428;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .settings .primary:hover { background: #b6d1ff; }
+    .settings .hint { margin: 0; color: var(--mist); font-size: 12.5px; }
+
+    .status { padding: 14px; color: var(--mist); }
+    .status[hidden] { display: none; }
+    .status.error, .status.setup { color: var(--flare); }
+
+    .members {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 0;
+      padding: 12px;
+      list-style: none;
+    }
+    .members:empty { display: none; }
+
+    .member {
+      border: 1px solid var(--seam);
+      border-radius: 10px;
+      background: var(--plate);
+      overflow: hidden;
+    }
+
+    .banner {
+      position: relative;
+      height: 72px;
+      background-color: #222c41;
+      background-size: cover;
+      background-position: left center;
+      background-repeat: no-repeat;
+    }
+    .member.leader .banner { box-shadow: inset 0 -2px 0 var(--gold); }
+
+    .scrim {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(8, 12, 20, 0.15) 0%, rgba(8, 12, 20, 0.55) 45%, rgba(8, 12, 20, 0.8) 100%);
+    }
+    .banner.plain .scrim { background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)); }
+
+    .banner-row {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 100%;
+      padding: 0 10px 0 84px;
+    }
+    .banner.plain .banner-row { padding-left: 12px; }
+
+    .emblem {
+      flex: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .who { flex: 1; min-width: 0; }
+    .name {
+      display: block;
+      overflow: hidden;
+      font-size: 16px;
+      font-weight: 600;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+    }
+    .name .code {
+      margin-left: 2px;
+      color: rgba(233, 239, 249, 0.62);
+      font-size: 12.5px;
+      font-weight: 400;
+    }
+
+    .tags { display: flex; gap: 5px; margin-top: 3px; }
+    .tag {
+      padding: 0 7px;
+      border-radius: 4px;
+      background: rgba(8, 12, 20, 0.6);
+      color: rgba(233, 239, 249, 0.8);
+      font-size: 12px;
+    }
+    .tag.leader { color: var(--gold); }
+
+    .pill {
+      flex: none;
+      padding: 5px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-radius: 999px;
+      background: rgba(8, 12, 20, 0.55);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+      color: var(--frost);
+      font-size: 13px;
+      text-decoration: none;
+    }
+    .pill:hover { background: rgba(158, 193, 255, 0.28); border-color: rgba(158, 193, 255, 0.7); }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 10px 0 11px;
+    }
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      padding: 0 4px;
+      border-left: 1px solid var(--seam);
+    }
+    .stat:first-child { border-left: 0; }
+    .stat .value { min-height: 24px; font-size: 18px; font-weight: 600; line-height: 24px; }
+    .stat .label { color: var(--mist); font-size: 12px; }
+
+    .skeleton {
+      display: block;
+      width: 2.4em;
+      height: 14px;
+      margin: 5px 0 5px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+      background-size: 200% 100%;
+      animation: sheen 1.5s linear infinite;
+    }
+    @keyframes sheen { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+    @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+    .note { padding: 11px 12px 12px; color: var(--mist); font-size: 13px; }
+    .note.error { color: var(--flare); }
+
+    .footer {
+      margin-top: auto;
+      padding: 8px 14px;
+      border-top: 1px solid var(--seam);
+      color: var(--mist);
+      font-size: 12px;
+    }
+    .footer:empty { display: none; }
+  </style>
+</head>
+<body>
+  <div id="app" class="panel">
+    <header>
+      <div class="title"><span id="dot" class="dot"></span><span>Fireteam</span></div>
+      <div class="actions">
+        <button id="refresh" type="button" title="Refresh now" aria-label="Refresh now">&#8635;</button>
+        <button id="popout" type="button" title="Pop out (stays on top of other windows)" aria-label="Pop out" hidden>&#10697;</button>
+        <button id="gear" type="button" title="Settings" aria-label="Settings">&#9881;</button>
+      </div>
+    </header>
+    <form id="settings" class="settings" hidden>
+      <label>Bungie API key
+        <input id="apiKey" type="password" autocomplete="off" spellcheck="false">
+      </label>
+      <label>Bungie Name
+        <input id="bungieName" placeholder="Guardian#1234" autocomplete="off" spellcheck="false">
+      </label>
+      <button type="submit" class="primary">Save</button>
+      <p class="hint">Stored only in this browser. Get a key at bungie.net/en/Application.</p>
+    </form>
+    <div id="status" class="status" hidden></div>
+    <ul id="members" class="members"></ul>
+    <footer id="footer" class="footer"></footer>
+  </div>
+
+  <script>
+// Thin Bungie.net API client for the pieces this app needs.
+(function (global) {
+  'use strict';
+
+  var ROOT = 'https://www.bungie.net';
+  var BASE = ROOT + '/Platform';
+  // Steam, Xbox, PlayStation, Epic. Party members don't carry a platform,
+  // so we probe these in order and remember the result.
+  var PROBE_ORDER = [3, 1, 2, 6];
+
+  function BungieError(message, code, httpStatus, throttleSeconds, fatal) {
+    var e = new Error(message);
+    e.name = 'BungieError';
+    e.code = code;
+    e.httpStatus = httpStatus || 0;
+    e.throttleSeconds = throttleSeconds || 0;
+    e.fatal = !!fatal; // true = config problem, retrying won't help
+    return e;
+  }
+
+  function createClient(apiKey) {
+    async function request(path, init) {
+      init = init || {};
+      var headers = Object.assign({ 'X-API-Key': apiKey }, init.headers || {});
+      var res;
+      try {
+        res = await fetch(BASE + path, Object.assign({}, init, { headers: headers }));
+      } catch (err) {
+        throw BungieError('Could not reach Bungie (' + err.message + '). If this is a CORS error, set the Origin Header on your Bungie app to * (see the notes).', -2);
+      }
+      var body;
+      try {
+        body = await res.json();
+      } catch (err) {
+        throw BungieError('Bungie returned a non-JSON response (maintenance?).', -1, res.status);
+      }
+      if (body.ErrorCode !== 1) {
+        var fatal = body.ErrorCode === 2101 || body.ErrorCode === 2111; // invalid / expired API key
+        var msg = fatal
+          ? 'Bungie rejected the API key. Check it in Settings.'
+          : (body.Message || body.ErrorStatus || 'Bungie error ' + body.ErrorCode);
+        throw BungieError(msg, body.ErrorCode, res.status, body.ThrottleSeconds, fatal);
+      }
+      return body.Response;
+    }
+
+    function getProfile(type, id, components) {
+      return request('/Destiny2/' + type + '/Profile/' + id + '/?components=' + components.join(','));
+    }
+
+    async function resolveSelf(cfg) {
+      if (cfg.membershipId && cfg.membershipType) {
+        return { membershipId: String(cfg.membershipId), membershipType: Number(cfg.membershipType) };
+      }
+      var name = String(cfg.bungieName || '');
+      var hash = name.lastIndexOf('#');
+      if (hash < 1 || !/^\d+$/.test(name.slice(hash + 1))) {
+        throw BungieError('Enter your full Bungie Name in Settings, like Guardian#1234.', -3, 0, 0, true);
+      }
+      var results = await request('/Destiny2/SearchDestinyPlayerByBungieName/-1/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          displayName: name.slice(0, hash),
+          displayNameCode: Number(name.slice(hash + 1))
+        })
+      });
+      if (!results || !results.length) {
+        throw BungieError('No Destiny 2 player found for "' + name + '". Check the Bungie Name in Settings.', 1601, 0, 0, true);
+      }
+      // With cross save, the active platform is the one matching crossSaveOverride.
+      var pick = results.find(function (r) { return r.crossSaveOverride && r.membershipType === r.crossSaveOverride; }) || results[0];
+      return { membershipId: String(pick.membershipId), membershipType: pick.membershipType };
+    }
+
+    async function resolveMembershipType(id, hintType) {
+      var order = PROBE_ORDER.slice();
+      if (hintType) order = [hintType].concat(order.filter(function (t) { return t !== hintType; }));
+      var lastErr = null;
+      for (var i = 0; i < order.length; i++) {
+        try {
+          var r = await getProfile(order[i], id, [100]);
+          if (r && r.profile && r.profile.data) return { type: order[i], profile: r.profile.data };
+        } catch (e) {
+          // A throttle, maintenance, or bad key won't be fixed by trying another platform.
+          if (e.fatal || e.throttleSeconds > 0 || e.code === 5 || e.code === -1 || e.code === -2) throw e;
+          lastErr = e;
+        }
+      }
+      throw lastErr || BungieError('Could not find that player on any platform.', 1601);
+    }
+
+    function getAccountStats(type, id) {
+      return request('/Destiny2/' + type + '/Account/' + id + '/Stats/');
+    }
+
+    // Returns { icon, banner } paths (relative to bungie.net) or null.
+    // icon = the square emblem, banner = the wide emblem artwork (secondaryIcon).
+    async function getEmblemIcon(hash) {
+      var def = await request('/Destiny2/Manifest/DestinyInventoryItemDefinition/' + hash + '/');
+      var icon = def && def.displayProperties && def.displayProperties.icon ? def.displayProperties.icon : null;
+      var banner = def && def.secondaryIcon ? def.secondaryIcon : null;
+      return icon || banner ? { icon: icon, banner: banner } : null;
+    }
+
+    return {
+      request: request,
+      getProfile: getProfile,
+      resolveSelf: resolveSelf,
+      resolveMembershipType: resolveMembershipType,
+      getAccountStats: getAccountStats,
+      getEmblemIcon: getEmblemIcon
+    };
+  }
+
+  function basic(group, key) {
+    return group && group[key] && group[key].basic ? group[key].basic : null;
+  }
+
+  function display(group, key) {
+    var b = basic(group, key);
+    return b && b.displayValue != null ? String(b.displayValue) : null;
+  }
+
+  // Flattens the account stats response into the few numbers the overlay shows.
+  function parseAccountStats(raw) {
+    var merged = raw && raw.mergedAllCharacters ? raw.mergedAllCharacters : {};
+    var results = merged.results || {};
+    var pve = results.allPvE && results.allPvE.allTime ? results.allPvE.allTime : {};
+    var pvp = results.allPvP && results.allPvP.allTime ? results.allPvP.allTime : {};
+    var all = merged.merged && merged.merged.allTime ? merged.merged.allTime : {};
+
+    var secs = basic(all, 'secondsPlayed');
+    if (!secs) secs = basic(pve, 'secondsPlayed');
+    var pvpSecs = basic(pvp, 'secondsPlayed');
+    var totalSecs = (secs ? secs.value : 0) || 0;
+    if (!all.secondsPlayed && pvpSecs) totalSecs += pvpSecs.value || 0;
+
+    return {
+      hours: totalSecs ? Math.round(totalSecs / 3600).toLocaleString() + 'h' : null,
+      pveClears: display(pve, 'activitiesCleared'),
+      pveKd: display(pve, 'killsDeathsRatio'),
+      pvpKd: display(pvp, 'killsDeathsRatio')
+    };
+  }
+
+  global.BungieClient = {
+    ROOT: ROOT,
+    create: createClient,
+    parseAccountStats: parseAccountStats,
+    BungieError: BungieError
+  };
+})(window);
+
+</script>
+  <script>
+// Polling + caching core for the browser version (no Overwolf).
+// FireteamCore.create(getConfig) -> { state, subscribe, start, applyConfig, refresh }
+(function (global) {
+  'use strict';
+
+  var PARTY_LEADER = 8; // DestinyPartyMemberStates flag
+
+  function pad4(n) {
+    var s = String(n);
+    while (s.length < 4) s = '0' + s;
+    return s;
+  }
+
+  // userInfo comes from the profile component: bungieGlobalDisplayName + code is the Bungie Name.
+  function nameFromUserInfo(ui) {
+    if (!ui) return null;
+    var name = ui.bungieGlobalDisplayName || ui.displayName || '';
+    if (!name) return null;
+    var code = ui.bungieGlobalDisplayName && ui.bungieGlobalDisplayNameCode != null
+      ? '#' + pad4(ui.bungieGlobalDisplayNameCode) : '';
+    return { name: name, code: code };
+  }
+
+  function create(getConfig) {
+    var state = { phase: 'starting', message: '', members: [], updatedAt: null };
+    var subscribers = [];
+    var profiles = {};   // membershipId -> cached lookup data
+    var lastParty = [];  // last raw partyMembers from Bungie
+    var client = null;
+    var self = null;
+    var selfInfo = null; // { name, code } of the signed-in player
+    var loopToken = 0;
+    var consecutiveErrors = 0;
+    var queue = [];
+    var active = 0;
+
+    function cfg() { return getConfig() || {}; }
+    function ttl() { return cfg().statsTtlMs || 30 * 60 * 1000; }
+    function interval() { return cfg().pollIntervalMs || 20000; }
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    // ---------- state + subscribers ----------
+
+    function notify() {
+      subscribers.forEach(function (fn) {
+        try { fn(state); } catch (e) { console.error('subscriber failed', e); }
+      });
+    }
+
+    function subscribe(fn) {
+      subscribers.push(fn);
+      try { fn(state); } catch (e) { console.error('subscriber failed', e); }
+      return function () { subscribers = subscribers.filter(function (f) { return f !== fn; }); };
+    }
+
+    function setPhase(phase, message) {
+      state.phase = phase;
+      state.message = message || '';
+      notify();
+    }
+
+    // ---------- small caches (localStorage, best effort) ----------
+
+    function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+    function lsSet(key, val) { try { localStorage.setItem(key, val); } catch (e) { /* ignore */ } }
+
+    function readCachedName(id) {
+      try { return JSON.parse(lsGet('ft.name.' + id)) || null; } catch (e) { return null; }
+    }
+
+    function setName(p, id, info) {
+      if (!info) return;
+      p.name = info.name;
+      p.code = info.code;
+      lsSet('ft.name.' + id, JSON.stringify(info));
+    }
+
+    // ---------- member data ----------
+
+    function buildLinks(id) {
+      return [{ label: 'Warmind', url: 'https://warmind.io/p/' + encodeURIComponent(id) }];
+    }
+
+    function pump() {
+      while (active < 2 && queue.length) {
+        var job = queue.shift();
+        active++;
+        job().then(done, done);
+      }
+      function done() { active--; pump(); }
+    }
+
+    function enqueue(job) { queue.push(job); pump(); }
+
+    async function loadEmblem(p, hash) {
+      var cached = null;
+      try { cached = JSON.parse(lsGet('ft.emblem2.' + hash)); } catch (e) { /* refetch */ }
+      if (!cached) {
+        try {
+          cached = await client.getEmblemIcon(hash);
+          if (cached) lsSet('ft.emblem2.' + hash, JSON.stringify(cached));
+        } catch (e) { return; /* emblem is cosmetic */ }
+      }
+      if (!cached) return;
+      p.emblemUrl = cached.icon ? BungieClient.ROOT + cached.icon : null;
+      p.bannerUrl = cached.banner ? BungieClient.ROOT + cached.banner : null;
+      rebuildMembers();
+    }
+
+    async function fetchProfileData(id, p, myClient) {
+      p.fetching = true;
+      try {
+        var found;
+        if (self && id === self.membershipId) {
+          found = { type: self.membershipType };
+          setName(p, id, selfInfo);
+        } else {
+          found = await myClient.resolveMembershipType(id, p.type || Number(lsGet('ft.type.' + id)) || 0);
+          setName(p, id, nameFromUserInfo(found.profile && found.profile.userInfo));
+        }
+        p.type = found.type;
+        lsSet('ft.type.' + id, String(found.type));
+        try {
+          var raw = await myClient.getAccountStats(p.type, id);
+          p.stats = BungieClient.parseAccountStats(raw);
+          p.dataState = 'ok';
+          p.error = '';
+          p.nextFetchAt = Date.now() + ttl();
+        } catch (e) {
+          if (e.code === 1665 || /privacy/i.test(e.message || '')) {
+            p.dataState = 'private';
+            p.nextFetchAt = Date.now() + ttl();
+          } else {
+            throw e;
+          }
+        }
+      } catch (e) {
+        p.dataState = 'error';
+        p.error = e.message || 'Lookup failed';
+        p.nextFetchAt = Date.now() + (e.throttleSeconds ? e.throttleSeconds * 1000 : 60000);
+      } finally {
+        p.fetching = false;
+        if (myClient === client) rebuildMembers();
+      }
+    }
+
+    function ensureProfile(id, emblemHash) {
+      var p = profiles[id];
+      if (!p) {
+        var cachedName = readCachedName(id);
+        p = profiles[id] = {
+          type: null, stats: null, dataState: 'loading', error: '',
+          name: cachedName ? cachedName.name : '', code: cachedName ? cachedName.code : '',
+          emblemUrl: null, bannerUrl: null, emblemHash: null, fetching: false, nextFetchAt: 0
+        };
+      }
+      if (emblemHash && p.emblemHash !== emblemHash) {
+        p.emblemHash = emblemHash;
+        loadEmblem(p, emblemHash);
+      }
+      if (!p.fetching && Date.now() >= p.nextFetchAt) {
+        p.fetching = true; // claim the slot so we don't enqueue twice
+        var myClient = client;
+        enqueue(function () { return fetchProfileData(id, p, myClient); });
+      }
+      return p;
+    }
+
+    function rebuildMembers() {
+      state.members = lastParty.map(function (pm) {
+        var id = String(pm.membershipId);
+        var p = profiles[id] || {};
+        var isSelf = !!(self && id === self.membershipId);
+        var known = isSelf && selfInfo ? selfInfo : (p.name ? { name: p.name, code: p.code } : null);
+        var name = known ? known.name : (pm.displayName || '');
+        if (!name) name = p.dataState === 'error' ? 'Guardian ' + id.slice(-4) : 'Loading…';
+        return {
+          id: id,
+          name: name,
+          code: known ? known.code : '',
+          isLeader: !!(pm.status & PARTY_LEADER),
+          isSelf: isSelf,
+          emblemUrl: p.emblemUrl || null,
+          bannerUrl: p.bannerUrl || null,
+          dataState: p.dataState || 'loading',
+          error: p.error || '',
+          stats: p.stats || null,
+          links: buildLinks(id)
+        };
+      });
+      notify();
+    }
+
+    // ---------- polling ----------
+
+    function friendly(e) {
+      if (e.throttleSeconds) return 'Bungie is rate limiting requests; retrying shortly.';
+      if (e.code === 5) return 'Bungie API is down for maintenance.';
+      return e.message || 'Something went wrong talking to Bungie.';
+    }
+
+    async function tick() {
+      try {
+        if (!client) {
+          var key = cfg().apiKey;
+          if (!key) {
+            setPhase('setup', 'Enter your Bungie API key and Bungie Name in Settings.');
+            return null;
+          }
+          client = BungieClient.create(key);
+        }
+        if (!self) self = await client.resolveSelf(cfg());
+
+        var prof = await client.getProfile(self.membershipType, self.membershipId, [100, 1000]);
+        var ui = prof && prof.profile && prof.profile.data && prof.profile.data.userInfo;
+        selfInfo = nameFromUserInfo(ui) || selfInfo;
+        var transitory = prof && prof.profileTransitoryData && prof.profileTransitoryData.data;
+        lastParty = (transitory && transitory.partyMembers) || [];
+        lastParty.forEach(function (pm) { ensureProfile(String(pm.membershipId), pm.emblemHash); });
+
+        consecutiveErrors = 0;
+        state.updatedAt = Date.now();
+        state.phase = lastParty.length ? 'ok' : 'solo';
+        state.message = lastParty.length ? '' : 'Not in a fireteam right now.';
+        rebuildMembers();
+        return interval();
+      } catch (e) {
+        if (e.fatal) {
+          lastParty = [];
+          state.members = [];
+          setPhase('setup', e.message);
+          return null;
+        }
+        consecutiveErrors++;
+        setPhase('error', friendly(e));
+        var backoff = Math.min(60000, interval() * Math.pow(2, consecutiveErrors - 1));
+        if (e.throttleSeconds) backoff = Math.max(backoff, e.throttleSeconds * 1000);
+        return backoff;
+      }
+    }
+
+    async function loop(token) {
+      while (loopToken === token) {
+        var wait = await tick();
+        if (wait === null) return;
+        await sleep(wait);
+      }
+    }
+
+    function start() {
+      loopToken++;
+      consecutiveErrors = 0;
+      loop(loopToken);
+    }
+
+    // Call after the settings change: forget everything tied to the old account.
+    function applyConfig() {
+      loopToken++;
+      client = null;
+      self = null;
+      selfInfo = null;
+      profiles = {};
+      lastParty = [];
+      queue = [];
+      state.members = [];
+      state.updatedAt = null;
+      setPhase('starting', '');
+      start();
+    }
+
+    return {
+      state: state,
+      subscribe: subscribe,
+      start: start,
+      applyConfig: applyConfig,
+      refresh: start
+    };
+  }
+
+  global.FireteamCore = { create: create };
+})(window);
+
+</script>
+  <script>
+// UI for the browser version: settings form, member cards, pop-out window.
+(function () {
+  'use strict';
+
+  var SETTINGS_KEY = 'ft.web.settings';
+
+  function loadSettings() {
+    try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function saveSettings(s) {
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
+  }
+
+  var settings = loadSettings();
+  var core = FireteamCore.create(function () { return settings; });
+
+  // Hold element references: after pop-out the nodes live in another document.
+  function byId(id) { return document.getElementById(id); }
+  var els = {
+    app: byId('app'),
+    dot: byId('dot'),
+    status: byId('status'),
+    members: byId('members'),
+    footer: byId('footer'),
+    form: byId('settings'),
+    apiKey: byId('apiKey'),
+    bungieName: byId('bungieName'),
+    gear: byId('gear'),
+    refresh: byId('refresh'),
+    popout: byId('popout')
+  };
+
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  function statCell(label, value, loading) {
+    var cell = el('div', 'stat');
+    cell.appendChild(el('span', loading ? 'value skeleton' : 'value', loading ? '' : (value || '–')));
+    cell.appendChild(el('span', 'label', label));
+    return cell;
+  }
+
+  var STAT_LABELS = ['Hours', 'PvE clears', 'PvE K/D', 'PvP K/D'];
+
+  function renderStats(m) {
+    var loading = m.dataState === 'loading';
+    var s = m.stats || {};
+    var values = [s.hours, s.pveClears, s.pveKd, s.pvpKd];
+    var grid = el('div', 'stats');
+    STAT_LABELS.forEach(function (label, i) {
+      grid.appendChild(statCell(label, values[i], loading));
+    });
+    return grid;
+  }
+
+  function renderMember(m) {
+    var li = el('li', 'member' + (m.isLeader ? ' leader' : ''));
+
+    var banner = el('div', 'banner' + (m.bannerUrl ? '' : ' plain'));
+    if (m.bannerUrl) {
+      banner.style.backgroundImage = 'url("' + m.bannerUrl.replace(/"/g, '%22') + '")';
+    }
+    banner.appendChild(el('div', 'scrim'));
+
+    var row = el('div', 'banner-row');
+    if (!m.bannerUrl && m.emblemUrl) {
+      var img = el('img', 'emblem');
+      img.src = m.emblemUrl;
+      img.alt = '';
+      row.appendChild(img);
+    }
+
+    var who = el('div', 'who');
+    var name = el('span', 'name');
+    name.appendChild(el('span', 'nm', m.name));
+    if (m.code) name.appendChild(el('span', 'code', m.code));
+    who.appendChild(name);
+    if (m.isLeader || m.isSelf) {
+      var tags = el('div', 'tags');
+      if (m.isLeader) tags.appendChild(el('span', 'tag leader', 'Leader'));
+      if (m.isSelf) tags.appendChild(el('span', 'tag', 'You'));
+      who.appendChild(tags);
+    }
+    row.appendChild(who);
+
+    m.links.forEach(function (l) {
+      var a = el('a', 'pill', l.label);
+      a.href = l.url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.title = 'Open ' + m.name + ' on ' + l.label;
+      row.appendChild(a);
+    });
+    banner.appendChild(row);
+    li.appendChild(banner);
+
+    if (m.dataState === 'private') {
+      li.appendChild(el('div', 'note', 'This player keeps their stats private.'));
+    } else if (m.dataState === 'error') {
+      li.appendChild(el('div', 'note error', 'Stats unavailable: ' + m.error));
+    } else {
+      li.appendChild(renderStats(m));
+    }
+    return li;
+  }
+
+  function formatTime(ts) {
+    var d = new Date(ts);
+    function p(n) { return n < 10 ? '0' + n : String(n); }
+    return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  }
+
+  function render(state) {
+    els.dot.className = 'dot' + (state.phase === 'ok' || state.phase === 'solo' ? ' ok'
+      : state.phase === 'error' || state.phase === 'setup' ? ' ' + state.phase : '');
+
+    if (state.phase === 'starting') {
+      els.status.hidden = false;
+      els.status.className = 'status';
+      els.status.textContent = 'Connecting to Bungie…';
+    } else if (state.message) {
+      els.status.hidden = false;
+      els.status.className = 'status ' + state.phase;
+      els.status.textContent = state.message;
+    } else {
+      els.status.hidden = true;
+    }
+
+    els.members.textContent = '';
+    if (state.phase !== 'setup') {
+      state.members.forEach(function (m) { els.members.appendChild(renderMember(m)); });
+    }
+
+    els.footer.textContent = state.updatedAt ? 'Updated ' + formatTime(state.updatedAt) : '';
+  }
+
+  // ---------- settings ----------
+
+  els.apiKey.value = settings.apiKey || '';
+  els.bungieName.value = settings.bungieName || '';
+  els.form.hidden = !!settings.apiKey && !!settings.bungieName;
+
+  els.gear.addEventListener('click', function () { els.form.hidden = !els.form.hidden; });
+
+  els.form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    settings = {
+      apiKey: els.apiKey.value.trim(),
+      bungieName: els.bungieName.value.trim()
+    };
+    saveSettings(settings);
+    els.form.hidden = true;
+    core.applyConfig();
+  });
+
+  els.refresh.addEventListener('click', function () { core.refresh(); });
+
+  // ---------- pop-out (Chrome/Edge Document Picture-in-Picture) ----------
+
+  var pipSupported = 'documentPictureInPicture' in window;
+  els.popout.hidden = !pipSupported;
+
+  els.popout.addEventListener('click', async function () {
+    if (!pipSupported) return;
+    try {
+      var pip = await window.documentPictureInPicture.requestWindow({ width: 380, height: 560 });
+      document.querySelectorAll('style').forEach(function (s) {
+        pip.document.head.appendChild(s.cloneNode(true));
+      });
+      pip.document.body.className = 'pip';
+      pip.document.body.appendChild(els.app);
+      pip.addEventListener('pagehide', function () { document.body.appendChild(els.app); });
+    } catch (e) {
+      console.error('pop-out failed', e);
+    }
+  });
+
+  core.subscribe(render);
+  core.start();
+})();
+
+</script>
+</body>
+</html>
